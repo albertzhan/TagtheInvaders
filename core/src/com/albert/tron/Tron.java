@@ -158,16 +158,24 @@ public class Tron extends ApplicationAdapter implements InputProcessor{
         shipObject2 = new btCollisionObject();
         blue = new Ship(player1Instance,5,0,5,cam,cam21,shipObject);
         red = new Ship(player2Instance,3,0,1,cam2,cam22,shipObject2);
-        shipObject.setCollisionShape(shipShape);
-        shipObject.setWorldTransform(blue.instance.transform);
+        blue.collisionObject.setCollisionShape(shipShape);
+        blue.collisionObject.setWorldTransform(blue.instance.transform);        
+        red.collisionObject.setCollisionShape(shipShape);
+        red.collisionObject.setWorldTransform(red.instance.transform);
         cubeShape = new btBoxShape(new Vector3(10f,10f,10f));
         
         packages = loader.loadModel(Gdx.files.internal("invader.obj"));
-        packageInstance = new ModelInstance(packages);
-        packageObject = new btCollisionObject();
-        packageInstance.transform.translate(new Vector3 (0,4,2));
-        packageObject.setCollisionShape(shipShape);//just the basic sphere
-        packageObject.setWorldTransform(packageInstance.transform);
+        for (int i = 0; i < 100; ++i){
+            packageInstance = new ModelInstance(packages);
+            packageObject = new btCollisionObject();
+            packageInstance.transform.translate(new Vector3 (0,4,2));
+            packageObject.setCollisionShape(shipShape);//just the basic sphere
+            packageObject.setWorldTransform(packageInstance.transform);
+       
+            tmpinvader = new Invader(packageInstance, packageObject);
+            invaders.add(tmpinvader);
+        }
+
 //        for(int i = 0; i < 1; ++i){//creating the invaders
 //            packageInstance = new ModelInstance(packages);
 //            invaderObject = new btCollisionObject();
@@ -223,18 +231,17 @@ public class Tron extends ApplicationAdapter implements InputProcessor{
 		img.dispose();
 	}
 	public void handleCollisions(){
-		//handling blue
-		//blue.checkCollided(array of all the invaders)
-		if (checkCollision(packageObject,blue.collisionObject)){
-			System.out.println("HI");
+		handleCollisionsShip(red);
+		handleCollisionsShip(blue);
+
+	}
+	public void handleCollisionsShip(Ship killer){
+		for (int i = 0; i < invaders.size; ++i){
+			if (checkCollision(invaders.get(i).collisionObject,killer.collisionObject)){
+				invaders.removeIndex(i);
+				killer.kills++;
+			}
 		}
-//		for (Invader invader: invaders){
-//			if (checkCollision(invader.collisionObject,blue.collisionObject)){
-//				System.out.println("HI");
-//				int e;
-//				//do something
-//			}
-//		}
 	}
 	public void checkKeyPressed(){
         checkBluePressed();
@@ -242,7 +249,7 @@ public class Tron extends ApplicationAdapter implements InputProcessor{
 	}
 	public void cameraSetup(){
         blue.cam = new PerspectiveCamera(67, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
-		blue.cam.position.set(blue.position.add(0,1,-2));
+		blue.cam.position.set(blue.position.add(0,1.7f,-2.8f));
         blue.cam.lookAt(blue.position);
         blue.cam.near = 0.01f;
         blue.cam.far = 300f;
@@ -289,9 +296,9 @@ public class Tron extends ApplicationAdapter implements InputProcessor{
         //modelBatch.render(cubeInstance,environment);
         //modelBatch.render(cubesface.get(0),environment);
         modelBatch.render(packageInstance,environment);
-//        for (Invader i: invaders){
-//        	modelBatch.render(i.instance);
-//        }
+        for (Invader i: invaders){
+        	modelBatch.render(i.instance);
+        }
         modelBatch.end();
         //blue top
         Gdx.gl.glViewport(200,3*Gdx.graphics.getHeight()/4,Gdx.graphics.getWidth()/2-200,Gdx.graphics.getHeight()/4);
@@ -306,6 +313,9 @@ public class Tron extends ApplicationAdapter implements InputProcessor{
         red.cam.update();
         modelBatch.render(red.instance,environment);
         modelBatch.render(blue.instance,environment);
+        for (Invader i: invaders){
+        	modelBatch.render(i.instance);
+        }
         //modelBatch.render(grids,environment);
         //modelBatch.render(cubesface,environment);
         if(space != null){

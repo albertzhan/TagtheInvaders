@@ -24,6 +24,7 @@ public class Ship {
 	public Camera fakecam;
 	private Vector3 currDirection;//to replace and switch the directions
 	public btCollisionObject collisionObject;
+	public int kills = 0;
 	public Ship (ModelInstance instance, float x, float y, float z, Camera cam,Camera cam2, btCollisionObject collisionObject){
 
 		this.instance = instance;
@@ -54,7 +55,7 @@ public class Ship {
 		instance.transform.translate(new Vector3 (0,0,speed));//always makes the instance go forward
 		position = instance.transform.getTranslation(new Vector3());//takes in what position the instance is at
 		if (Math.abs(position.x) >= 9.5 || Math.abs(position.y) >= 9.5 || Math.abs(position.z) >= 9.5){
-			instance.transform.translate(new Vector3(0,0,-1*speed));
+			instance.transform.translate(new Vector3(0,0,-1*speed));//undoes the moving forward
 			position = instance.transform.getTranslation(new Vector3());
 		}else{
 			cam.lookAt(position);
