@@ -9,6 +9,8 @@ public class DesktopLauncher {
 		LwjglApplicationConfiguration config = new LwjglApplicationConfiguration();
 		config.height = 1000;
 		config.width = 2000;
+		config.title = "GobbleFactory";
+		config.useHDPI = true;
 		new LwjglApplication(new Tron(), config);
 	}
 }

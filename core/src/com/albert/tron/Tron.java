@@ -1,5 +1,9 @@
 package com.albert.tron;
 
+/**Playing with 3d
+ * Using the tutorial stuffs from Xoppa
+ * models and everything are on his github
+ */
 
 import com.badlogic.gdx.ApplicationAdapter;
 import com.badlogic.gdx.Gdx;
@@ -31,60 +35,100 @@ import com.badlogic.gdx.graphics.g3d.utils.DefaultShaderProvider;
 import com.badlogic.gdx.graphics.g3d.utils.MeshPartBuilder;
 import com.badlogic.gdx.graphics.g3d.utils.ModelBuilder;
 import com.badlogic.gdx.math.Vector3;
+import com.badlogic.gdx.physics.bullet.Bullet;
+import com.badlogic.gdx.physics.bullet.collision.CollisionObjectWrapper;
+import com.badlogic.gdx.physics.bullet.collision.btBoxShape;
+import com.badlogic.gdx.physics.bullet.collision.btCollisionAlgorithm;
+import com.badlogic.gdx.physics.bullet.collision.btCollisionAlgorithmConstructionInfo;
+import com.badlogic.gdx.physics.bullet.collision.btCollisionConfiguration;
+import com.badlogic.gdx.physics.bullet.collision.btCollisionDispatcher;
+import com.badlogic.gdx.physics.bullet.collision.btCollisionObject;
+import com.badlogic.gdx.physics.bullet.collision.btCollisionShape;
+import com.badlogic.gdx.physics.bullet.collision.btDefaultCollisionConfiguration;
+import com.badlogic.gdx.physics.bullet.collision.btDispatcher;
+import com.badlogic.gdx.physics.bullet.collision.btDispatcherInfo;
+import com.badlogic.gdx.physics.bullet.collision.btManifoldResult;
+import com.badlogic.gdx.physics.bullet.collision.btSphereBoxCollisionAlgorithm;
+import com.badlogic.gdx.physics.bullet.collision.btSphereShape;
 import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.Disposable;
-//2 player 3d Tron
-//splitscreen (like mariokart), using lighting from environment to make it easier to see
+/**
+ * The goal of the game is to collect the invaders
+ * some invaders are good, some are bad
+ * You must stay within the certain boundaries
+ * Hitting the bad invaders or the boundaries will lose you the game
+ * Once all the good invaders are collected, winner is decided by the most collected
+ * There will always be 20, starting out as all good
+ * For each good one taken, another is generated bad
+**/
 public class Tron extends ApplicationAdapter implements InputProcessor{
-	public Vector3 moveTest2;
-	
-	public PerspectiveCamera cam; 
-	public PerspectiveCamera cam2;
-	public PerspectiveCamera cam3;
-	public PerspectiveCamera cam21;
-	public PerspectiveCamera cam22;
-	public Ship blue;
-	public Ship red;
-	
-	public FileHandle space;
-	public Cubemap spaceCube;
-	
-	public Model gridlayer;
-	public ModelInstance gridlayerInstance;
-	
-	public Model cube;
-    public Model model;
-    public Model model2;
-    public ModelInstance instance;
-    public Array<ModelInstance> cubesface = new Array<ModelInstance>();//(of cubes)
-    public ModelBatch modelBatch;
-    public AssetManager assets;
-    public ModelInstance cubeInstance;
-    public ModelInstance player1Instance;
-    public ModelInstance player2Instance;
-    public Array<ModelInstance> grids = new Array<ModelInstance>();
-    public Environment environment;
-    public boolean loading;
-    public int x;
+	Vector3 moveTest2;
+
+	PerspectiveCamera cam; 
+	PerspectiveCamera cam2;
+	PerspectiveCamera cam3;
+	PerspectiveCamera cam21;
+	PerspectiveCamera cam22;
+	Ship blue;
+	Ship red;
+	boolean collision;
+	Cubemap spaceCube;
+
+	Model gridlayer;
+	ModelInstance gridlayerInstance;
+
+	Model cube;
+	Model model;
+	Model packages;
+	Model model2;
+	Model spacemodel;
+	ModelInstance instance;
+	ModelInstance packageInstance;
+	Array<ModelInstance> cubesface = new Array<ModelInstance>();//(of cubes)
+	Array<btCollisionObject> cubesfaceObject = new Array<btCollisionObject>();
+	ModelBatch modelBatch;
+	AssetManager assets;
+	ModelInstance cubeInstance;
+	ModelInstance player1Instance;
+	ModelInstance player2Instance;
+	ModelInstance space;
+    Array<ModelInstance> grids = new Array<ModelInstance>();
+    Environment environment;
+    int x;
     
+    
+    Invader tmpinvader;
+    Array<Invader> invaders = new Array<Invader>();
+    btCollisionObject invaderObject;
+    btCollisionObject packageObject;
+    
+    btCollisionConfiguration collisionConfig;
+    btDispatcher dispatcher;
+    btCollisionShape cubeShape;
+    btCollisionObject cubeObject;
+    btCollisionShape shipShape;
+    btCollisionObject shipObject;
+    btCollisionObject shipObject2;
 	SpriteBatch batch;
 	Texture img;
 
 	@Override
     public void create () {
-		x = 0;
-        Vector3 moveTest2 = new Vector3(0,0.1f,0);
-	  
-        space = Gdx.files.internal("badlogic.jpg");
-
+		img = new Texture(Gdx.files.internal("badlogic.jpg"));
+		batch = new SpriteBatch();
+		
+		
+		Bullet.init();//initializing all bullet for collision
+        collisionConfig = new btDefaultCollisionConfiguration();
+        dispatcher = new btCollisionDispatcher(collisionConfig);
         //spaceCube = new Cubemap(Gdx.files.internal("space.jpg"),Gdx.files.internal("space.jpg"),Gdx.files.internal("space.jpg"),Gdx.files.internal("space.jpg"),Gdx.files.internal("space.jpg"),Gdx.files.internal("space.jpg"));
-        
+        collision = false;
         //setting up the environment
         environment = new Environment();
         environment.set(new ColorAttribute(ColorAttribute.AmbientLight, 3f, 1f, 1f, 1f));
         environment.add(new DirectionalLight().set(0.8f, 0.8f, 0.8f, -1f, -0.8f, -0.2f));
         environment.set(new CubemapAttribute(CubemapAttribute.EnvironmentMap, spaceCube));
-        //new modelbatch to do stuff
+        //new modelbatch to do stuff in 3d
         /**modelBatch = new ModelBatch(new DefaultShaderProvider(
         	    Gdx.files.internal("Shaders/vertex.glsl"),
         	    Gdx.files.internal("Shaders/fragment.glsl")));**/
@@ -95,46 +139,53 @@ public class Tron extends ApplicationAdapter implements InputProcessor{
         gridlayer = modelBuilder.createLineGrid(10,10,2f,2f,
         		new Material(ColorAttribute.createDiffuse(Color.GREEN), ColorAttribute.createSpecular(1, 1, 1, 1), FloatAttribute.createShininess(8f)), 
         		Usage.Position | Usage.Normal);
-        for (float i = -10; i < 20; ++i){
+        for (float i = -10; i < 10; ++i){
             gridlayerInstance = new ModelInstance(gridlayer);
             gridlayerInstance.transform.translate(0,i,0);
             grids.add(gridlayerInstance);
         }
-        //creating the sides of the cube (using more cubes)
-        cube = modelBuilder.createBox(20f,20f, 20f,
-        		new Material(TextureAttribute.createDiffuse(new Texture(space)))
-        		/**new Material(ColorAttribute.createDiffuse(Color.BLUE))**/,
-        		Usage.Position | Usage.Normal);
-        cube.manageDisposable(new Texture(space));
-        //sides of the cube
-        cubeInstance = new ModelInstance(cube);
-        cubeInstance.transform.translate(20, 0, 0);
-        cubesface.add(cubeInstance);
-        cubeInstance = new ModelInstance(cube);
-        cubeInstance.transform.translate(-20, 0, 0);
-        cubesface.add(cubeInstance);
-        cubeInstance = new ModelInstance(cube);
-        cubeInstance.transform.translate(0, 20, 0);
-        cubesface.add(cubeInstance);
-        cubeInstance = new ModelInstance(cube);
-        cubeInstance.transform.translate(0, -20, 0);
-        cubesface.add(cubeInstance);
-        cubeInstance = new ModelInstance(cube);
-        cubeInstance.transform.translate(0, 0, 20);
-        cubesface.add(cubeInstance);
-        cubeInstance = new ModelInstance(cube);
-        cubeInstance.transform.translate(0, 0, -20);
-        cubesface.add(cubeInstance);
         
-        ModelLoader loader = new ObjLoader();
+		ModelLoader loader = new ObjLoader();
         model = loader.loadModel(Gdx.files.internal("ship2/ship.obj"));
         model2 = loader.loadModel(Gdx.files.internal("ship/ship.obj"));
+
         player1Instance = new ModelInstance(model);
         player2Instance = new ModelInstance(model2);
+        spacemodel = loader.loadModel(Gdx.files.internal("spacesphere.obj"));//the space that surrounds everything
+        space = new ModelInstance(spacemodel);
+        shipShape = new btSphereShape(0.5f);
+        shipObject = new btCollisionObject();
+        shipObject2 = new btCollisionObject();
+        blue = new Ship(player1Instance,5,0,5,cam,cam21,shipObject);
+        red = new Ship(player2Instance,3,0,1,cam2,cam22,shipObject2);
+        shipObject.setCollisionShape(shipShape);
+        shipObject.setWorldTransform(blue.instance.transform);
+        cubeShape = new btBoxShape(new Vector3(10f,10f,10f));
         
-        blue = new Ship(player1Instance,5,0,5,cam,cam21);
-        red = new Ship(player2Instance,3,0,1,cam2,cam22);
-        
+        packages = loader.loadModel(Gdx.files.internal("invader.obj"));
+        packageInstance = new ModelInstance(packages);
+        packageObject = new btCollisionObject();
+        packageInstance.transform.translate(new Vector3 (0,4,2));
+        packageObject.setCollisionShape(shipShape);//just the basic sphere
+        packageObject.setWorldTransform(packageInstance.transform);
+//        for(int i = 0; i < 1; ++i){//creating the invaders
+//            packageInstance = new ModelInstance(packages);
+//            invaderObject = new btCollisionObject();
+//            invaderObject.setCollisionShape(cubeShape);
+//            invaderObject.setWorldTransform(packageInstance.transform);
+//            tmpinvader = new Invader(packageInstance,invaderObject);
+//            invaders.add(tmpinvader);
+//        }   
+
+//        cubeObject = new btCollisionObject();
+//        cubeObject.setCollisionShape(cubeShape);
+//        cubeObject.setWorldTransform(cubesface.get(0).transform);
+//        for (ModelInstance cube: cubesface){
+//        	cubeObject = new btCollisionObject();
+//        	cubeObject.setCollisionShape(cubeShape);
+//        	cubeObject.setWorldTransform(cube.transform);
+//        	cubesfaceObject.add(cubeObject);
+//        }
         //setting the cameras
         cameraSetup();
     }
@@ -143,23 +194,47 @@ public class Tron extends ApplicationAdapter implements InputProcessor{
 	public void render () {//update state of game -called every couple of milliseconds
 		Gdx.gl.glClearColor(135/255f, 206/255f, 235/255f, 1);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT | GL20.GL_DEPTH_BUFFER_BIT);//clearing the screen
-        
+        Gdx.gl.glEnable(GL20.GL_DEPTH_TEST);
+
         checkKeyPressed();//checks rotations
-        advance(0.1f);//advances the ships
-        
-        checkCollision();
+        handleCollisions();
         cameraRender();
-       }
+        spriteRender();
+        if (Gdx.input.isKeyPressed(Keys.SPACE)){
+            advance(0.15f);
+        }
+        }
 	
 	@Override
 	public void dispose () {
-		
+        //cubeObject.dispose();
+        //cubeShape.dispose();
+
+        shipObject.dispose();
+        shipShape.dispose();
+
+        dispatcher.dispose();
+        collisionConfig.dispose();
 		//spaceCube.dispose();
-		
+		modelBatch.dispose();
 		model.dispose();
 		model2.dispose();
-		//batch.dispose();
-		//img.dispose();
+		batch.dispose();
+		img.dispose();
+	}
+	public void handleCollisions(){
+		//handling blue
+		//blue.checkCollided(array of all the invaders)
+		if (checkCollision(packageObject,blue.collisionObject)){
+			System.out.println("HI");
+		}
+//		for (Invader invader: invaders){
+//			if (checkCollision(invader.collisionObject,blue.collisionObject)){
+//				System.out.println("HI");
+//				int e;
+//				//do something
+//			}
+//		}
 	}
 	public void checkKeyPressed(){
         checkBluePressed();
@@ -169,7 +244,7 @@ public class Tron extends ApplicationAdapter implements InputProcessor{
         blue.cam = new PerspectiveCamera(67, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
 		blue.cam.position.set(blue.position.add(0,1,-2));
         blue.cam.lookAt(blue.position);
-        blue.cam.near = 1f;
+        blue.cam.near = 0.01f;
         blue.cam.far = 300f;
         blue.cam.update();
         
@@ -183,7 +258,7 @@ public class Tron extends ApplicationAdapter implements InputProcessor{
         red.cam = new PerspectiveCamera(67,Gdx.graphics.getWidth(),Gdx.graphics.getHeight());
         red.cam.position.set(red.position.add(0,1,-2));
         red.cam.lookAt(red.position);
-        red.cam.near = 1f;
+        red.cam.near = 0.01f;
         red.cam.far = 300f;
         red.cam.update();
         
@@ -195,7 +270,7 @@ public class Tron extends ApplicationAdapter implements InputProcessor{
         red.cam2.update();
         
         cam3 = new PerspectiveCamera(67,Gdx.graphics.getWidth(),Gdx.graphics.getHeight());
-        cam3.position.set(0,50f,0);
+        cam3.position.set(0,5f,0);
         cam3.lookAt(0,0,0);
         cam3.near = 1f;
         cam3.far = 300f;
@@ -211,14 +286,18 @@ public class Tron extends ApplicationAdapter implements InputProcessor{
         modelBatch.render(red.instance,environment);
         modelBatch.render(blue.instance,environment);
         modelBatch.render(grids,environment);
-        modelBatch.render(cubeInstance,environment);
+        //modelBatch.render(cubeInstance,environment);
+        //modelBatch.render(cubesface.get(0),environment);
+        modelBatch.render(packageInstance,environment);
+//        for (Invader i: invaders){
+//        	modelBatch.render(i.instance);
+//        }
         modelBatch.end();
         //blue top
         Gdx.gl.glViewport(200,3*Gdx.graphics.getHeight()/4,Gdx.graphics.getWidth()/2-200,Gdx.graphics.getHeight()/4);
         modelBatch.begin(blue.cam2);
         blue.cam2.update();
         modelBatch.render(blue.instance,environment);
-        
         modelBatch.end();
         
         //Right Half Red
@@ -228,9 +307,12 @@ public class Tron extends ApplicationAdapter implements InputProcessor{
         modelBatch.render(red.instance,environment);
         modelBatch.render(blue.instance,environment);
         //modelBatch.render(grids,environment);
-        modelBatch.render(cubesface,environment);
-
+        //modelBatch.render(cubesface,environment);
+        if(space != null){
+            modelBatch.render(space);
+        }
         modelBatch.end();
+        
         //red top
         Gdx.gl.glViewport(Gdx.graphics.getWidth()/2, 3*Gdx.graphics.getHeight()/4, Gdx.graphics.getWidth()/2-200, Gdx.graphics.getHeight()/4);
         modelBatch.begin(red.cam2);
@@ -241,10 +323,18 @@ public class Tron extends ApplicationAdapter implements InputProcessor{
         
         Gdx.gl.glViewport(Gdx.graphics.getWidth()/3, 3*Gdx.graphics.getHeight()/4, Gdx.graphics.getWidth()/3, Gdx.graphics.getHeight()/4);
         modelBatch.begin(cam3);
-        modelBatch.render(red.instance,environment);
-        modelBatch.render(blue.instance,environment);
+        cam3.lookAt(0, 0, 0);
+        //modelBatch.render(red.instance,environment);
+        //modelBatch.render(blue.instance,environment);
         modelBatch.render(gridlayerInstance,environment);
         modelBatch.end();	
+
+	}
+	public void spriteRender(){//takes care of all the 2d stuffs.
+		Gdx.gl.glViewport(0, 0, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
+		batch.begin();
+		batch.draw(img,0,0);
+		batch.end();
 	}
 	public void advance(float speed){
 		if (Gdx.input.isKeyPressed(Keys.SPACE)){
@@ -253,9 +343,27 @@ public class Tron extends ApplicationAdapter implements InputProcessor{
 		}
 
 	}
-	public void checkCollision(){
-		int e;
-	}
+    boolean checkCollision(btCollisionObject obj0, btCollisionObject obj1) {
+        CollisionObjectWrapper co0 = new CollisionObjectWrapper(obj0);
+        CollisionObjectWrapper co1 = new CollisionObjectWrapper(obj1);
+
+        btCollisionAlgorithm algorithm = dispatcher.findAlgorithm(co0.wrapper, co1.wrapper);
+
+        btDispatcherInfo info = new btDispatcherInfo();
+        btManifoldResult result = new btManifoldResult(co0.wrapper, co1.wrapper);
+
+        algorithm.processCollision(co0.wrapper, co1.wrapper, info, result);
+
+        boolean r = result.getPersistentManifold().getNumContacts() > 0;
+
+        dispatcher.freeCollisionAlgorithm(algorithm.getCPointer());
+        result.dispose();
+        info.dispose();
+        co1.dispose();
+        co0.dispose();
+
+        return r;
+    }
 	public void checkRedPressed(){
         if (Gdx.input.isKeyJustPressed(Keys.UP)){
         	red.rotate(0);

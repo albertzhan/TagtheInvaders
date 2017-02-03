@@ -5,6 +5,8 @@ import com.badlogic.gdx.graphics.Camera;
 import com.badlogic.gdx.graphics.PerspectiveCamera;
 import com.badlogic.gdx.graphics.g3d.ModelInstance;
 import com.badlogic.gdx.math.Vector3;
+import com.badlogic.gdx.physics.bullet.collision.btCollisionObject;
+import com.badlogic.gdx.utils.Array;
 /**Each "Tron" is a ship
 They will leave behind a trail
 instance will have a BoundingBox
@@ -19,9 +21,10 @@ public class Ship {
 	public Vector3 rightDirection;
 	public Camera cam;
 	public Camera cam2;
+	public Camera fakecam;
 	private Vector3 currDirection;//to replace and switch the directions
-	
-	public Ship (ModelInstance instance, float x, float y, float z, Camera cam,Camera cam2){
+	public btCollisionObject collisionObject;
+	public Ship (ModelInstance instance, float x, float y, float z, Camera cam,Camera cam2, btCollisionObject collisionObject){
 
 		this.instance = instance;
 		position = new Vector3(x,y,z);
@@ -30,29 +33,46 @@ public class Ship {
 		rightDirection = new Vector3(-1,0,0);
 		direction = new Vector3(0,0,1);//points in positive z direction in the normal model when loaded in
 		
+		this.collisionObject = collisionObject;
 		this.cam = cam;
 		this.cam = cam2;
 	}
+	public btCollisionObject checkCollided(Array<btCollisionObject> boxes){
+		return boxes.get(0);
+	}
 	public void advance(float speed){
+		//walls are when coords hit 9.5 
 		/**starts out going in positive z
 		 * up makes it 0,1,0
 		 * right is add x
 		 * left is minus x
+		**/
+		/**calculate if it is on the border
+		 * using bullet physics for this is overkill
+		 * the absolute of the coords cannot go over 9.5
+		 */
+		instance.transform.translate(new Vector3 (0,0,speed));//always makes the instance go forward
+		position = instance.transform.getTranslation(new Vector3());//takes in what position the instance is at
+		if (Math.abs(position.x) >= 9.5 || Math.abs(position.y) >= 9.5 || Math.abs(position.z) >= 9.5){
+			instance.transform.translate(new Vector3(0,0,-1*speed));
+			position = instance.transform.getTranslation(new Vector3());
+		}else{
+			cam.lookAt(position);
+			cam2.lookAt(position);
+			cam.translate(timesVector(direction,speed));
+			cam2.translate(timesVector(direction,speed));
+		}
+
+		//update the collision
+		collisionObject.setWorldTransform(instance.transform);
+	}
+	public void rotate(int angle){
+		/**up is 0, down is 1, right is 2, left is 3
 		 * up: direction = updirection, updirection = -direction
 		 * down: direction = -updirection, updirection = direction
 		 * right: direcion = rightdirection, rightdirection = -direction
 		 * left: direction = -rightdirection, rightdirection = direction
 		**/
-		instance.transform.translate(new Vector3 (0,0,speed));//always makes the instance go forward
-		position = instance.transform.getTranslation(new Vector3());//takes in what position the instance is at
-		//System.out.println(direction);
-		cam.lookAt(position);
-		cam2.lookAt(position);
-		cam.translate(timesVector(direction,speed));
-		cam2.translate(timesVector(direction,speed));
-	}
-	public void rotate(int angle){
-		/**up is 0, down is 1, right is 2, left is 3**/
 		if (angle == 0){//up
         	instance.transform.rotate(new Vector3(-1,0,0),90);
         	cam.rotateAround(position, rightDirection, 90);
