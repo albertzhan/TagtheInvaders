@@ -18,6 +18,7 @@ import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.PerspectiveCamera;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.VertexAttributes.Usage;
+import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.Sprite;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g3d.Environment;
@@ -34,6 +35,8 @@ import com.badlogic.gdx.graphics.g3d.loader.ObjLoader;
 import com.badlogic.gdx.graphics.g3d.utils.DefaultShaderProvider;
 import com.badlogic.gdx.graphics.g3d.utils.MeshPartBuilder;
 import com.badlogic.gdx.graphics.g3d.utils.ModelBuilder;
+import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
+import com.badlogic.gdx.graphics.glutils.ShapeRenderer.ShapeType;
 import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.physics.bullet.Bullet;
 import com.badlogic.gdx.physics.bullet.collision.CollisionObjectWrapper;
@@ -109,14 +112,26 @@ public class Tron extends ApplicationAdapter implements InputProcessor{
     btCollisionShape shipShape;
     btCollisionObject shipObject;
     btCollisionObject shipObject2;
+    
+    ShapeRenderer shapeRenderer;
+    BitmapFont font;
+    String mode;
 	SpriteBatch batch;
 	Texture img;
-
+	Texture gameMenuGF;
+	Texture coolRect;
+	Texture telescope;
 	@Override
     public void create () {
-		img = new Texture(Gdx.files.internal("badlogic.jpg"));
-		batch = new SpriteBatch();
+		mode = "Menu";
 		
+		img = new Texture(Gdx.files.internal("badlogic.jpg"));
+		gameMenuGF = new Texture(Gdx.files.internal("menuBG.jpg"));
+		coolRect = new Texture(Gdx.files.internal("data/coolRect.png"));
+		telescope = new Texture(Gdx.files.internal("data/telescope.png"));
+		batch = new SpriteBatch();
+		font = new BitmapFont();
+		shapeRenderer = new ShapeRenderer();
 		
 		Bullet.init();//initializing all bullet for collision
         collisionConfig = new btDefaultCollisionConfiguration();
@@ -126,7 +141,7 @@ public class Tron extends ApplicationAdapter implements InputProcessor{
         //setting up the environment
         environment = new Environment();
         environment.set(new ColorAttribute(ColorAttribute.AmbientLight, 3f, 1f, 1f, 1f));
-        environment.add(new DirectionalLight().set(0.8f, 0.8f, 0.8f, -1f, -0.8f, -0.2f));
+        environment.add(new DirectionalLight().set(0.2f, 0.2f, 0.2f, -1f, -0.8f, -0.2f));
         environment.set(new CubemapAttribute(CubemapAttribute.EnvironmentMap, spaceCube));
         //new modelbatch to do stuff in 3d
         /**modelBatch = new ModelBatch(new DefaultShaderProvider(
@@ -165,7 +180,7 @@ public class Tron extends ApplicationAdapter implements InputProcessor{
         cubeShape = new btBoxShape(new Vector3(10f,10f,10f));
         
         packages = loader.loadModel(Gdx.files.internal("invader.obj"));
-        for (int i = 0; i < 100; ++i){
+        for (int i = 0; i < 200; ++i){
             packageInstance = new ModelInstance(packages);
             packageObject = new btCollisionObject();
             packageInstance.transform.translate(new Vector3 (0,4,2));
@@ -206,18 +221,15 @@ public class Tron extends ApplicationAdapter implements InputProcessor{
 
         checkKeyPressed();//checks rotations
         handleCollisions();
-        cameraRender();
-        spriteRender();
-        if (Gdx.input.isKeyPressed(Keys.SPACE)){
-            advance(0.15f);
-        }
-        }
+        handle3D();//everything with 3d in it (draws some 2d as well)
+        handle2D();//the 2d overlay
+    }
 	
 	@Override
 	public void dispose () {
         //cubeObject.dispose();
         //cubeShape.dispose();
-
+		//System.out.printf("Blue: %d    Red: %d", blue.kills, red.kills);
         shipObject.dispose();
         shipShape.dispose();
 
@@ -229,6 +241,27 @@ public class Tron extends ApplicationAdapter implements InputProcessor{
 		model2.dispose();
 		batch.dispose();
 		img.dispose();
+		gameMenuGF.dispose();
+	}
+	public void handle3D(){
+		if (!mode.equals("Play")){
+			return;
+		}
+		cameraRender();
+		advance(0.1f);
+	}
+	public void handle2D(){
+		Gdx.gl.glViewport(0, 0, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
+		batch.begin();
+		if(mode.equals("Menu")){
+			batch.draw(gameMenuGF, 0, 0,Gdx.graphics.getWidth(),Gdx.graphics.getHeight());
+			if(Gdx.input.isKeyJustPressed(Keys.ENTER)){
+				mode = "Play";
+			}
+		}else{
+			spriteDraw();
+		}
+		batch.end();
 	}
 	public void handleCollisions(){
 		handleCollisionsShip(red);
@@ -282,9 +315,22 @@ public class Tron extends ApplicationAdapter implements InputProcessor{
         cam3.near = 1f;
         cam3.far = 300f;
         cam3.update();
+        red.advance(0.001f);
+        blue.advance(0.001f);
 	}
 	public void cameraRender(){
         /**------------Rendering with cameras------------**/
+		Gdx.gl.glViewport(0, 0, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
+		batch.begin();
+
+		shapeRenderer.begin(ShapeType.Filled);
+		shapeRenderer.setColor(Color.BROWN);
+		shapeRenderer.circle(300, 300, 50);
+		shapeRenderer.end();
+		font.getData().setScale(10);
+		font.draw(batch,"Hi",300,300);
+		
+		batch.end();
 		//Left Half bLue
 	    Gdx.gl.glViewport( 0,0,Gdx.graphics.getWidth()/2,3*Gdx.graphics.getHeight()/4 );
         modelBatch.begin(blue.cam);
@@ -301,7 +347,15 @@ public class Tron extends ApplicationAdapter implements InputProcessor{
         }
         modelBatch.end();
         //blue top
-        Gdx.gl.glViewport(200,3*Gdx.graphics.getHeight()/4,Gdx.graphics.getWidth()/2-200,Gdx.graphics.getHeight()/4);
+        Gdx.gl.glViewport(0,3*Gdx.graphics.getHeight()/4,Gdx.graphics.getWidth()/2,Gdx.graphics.getHeight()/4);
+
+        batch.begin();
+        batch.draw(coolRect,0,0,2*Gdx.graphics.getWidth()/3,Gdx.graphics.getHeight());
+        font.setColor(Color.CYAN);
+        font.draw(batch, "A;SLDKFJA;LSDKFJA;LSDJFAL;KSDJFAL;KSDJF;ASLKDJF;ALWKEJFAL;KSDJF;", 100, 100,1000,1000, false);
+
+        batch.end();
+        
         modelBatch.begin(blue.cam2);
         blue.cam2.update();
         modelBatch.render(blue.instance,environment);
@@ -323,8 +377,16 @@ public class Tron extends ApplicationAdapter implements InputProcessor{
         }
         modelBatch.end();
         
+
+        
         //red top
-        Gdx.gl.glViewport(Gdx.graphics.getWidth()/2, 3*Gdx.graphics.getHeight()/4, Gdx.graphics.getWidth()/2-200, Gdx.graphics.getHeight()/4);
+        Gdx.gl.glViewport(2*Gdx.graphics.getWidth()/3, 3*Gdx.graphics.getHeight()/4, Gdx.graphics.getWidth()/2, Gdx.graphics.getHeight()/4);
+        
+        batch.begin();
+        batch.draw(coolRect,0,0,2*Gdx.graphics.getWidth()/3,Gdx.graphics.getHeight());
+        //batch.draw(telescope,950,200,2*Gdx.graphics.getWidth()/3-1050,Gdx.graphics.getHeight()-40);
+        batch.end();
+        
         modelBatch.begin(red.cam2);
         red.cam2.update();
         modelBatch.render(red.instance,environment);
@@ -337,14 +399,14 @@ public class Tron extends ApplicationAdapter implements InputProcessor{
         //modelBatch.render(red.instance,environment);
         //modelBatch.render(blue.instance,environment);
         modelBatch.render(gridlayerInstance,environment);
+        for (Invader i: invaders){
+        	modelBatch.render(i.instance);
+        }
         modelBatch.end();	
 
 	}
-	public void spriteRender(){//takes care of all the 2d stuffs.
-		Gdx.gl.glViewport(0, 0, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
-		batch.begin();
+	public void spriteDraw(){//takes care of all the 2d stuffs.
 		batch.draw(img,0,0);
-		batch.end();
 	}
 	public void advance(float speed){
 		if (Gdx.input.isKeyPressed(Keys.SPACE)){
@@ -354,6 +416,7 @@ public class Tron extends ApplicationAdapter implements InputProcessor{
 
 	}
     boolean checkCollision(btCollisionObject obj0, btCollisionObject obj1) {
+    	//ripped off of Xoppa's tutorial
         CollisionObjectWrapper co0 = new CollisionObjectWrapper(obj0);
         CollisionObjectWrapper co1 = new CollisionObjectWrapper(obj1);
 

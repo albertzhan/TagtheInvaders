@@ -11,7 +11,7 @@ public class Invader {
 	public ModelInstance instance;//carries position
 	//public Camera cam;
 	public btCollisionObject collisionObject;
-	boolean good;
+	boolean dead = false;
 	public Invader(ModelInstance instance,btCollisionObject collisionObject){
 		this.instance = instance;
 		this.collisionObject = collisionObject;
@@ -23,7 +23,7 @@ public class Invader {
 		float y = (float) (14*rand.nextDouble()-10);//makes sure it is within the region
 		float z = (float) (14*rand.nextDouble()-8);
 		instance.transform.translate(x, y, z);
-		//instance.transform.rotate(new Vector3(2*rand.nextFloat()-1,2*rand.nextFloat()-1,2*rand.nextFloat()-1), new Vector3(rand.nextFloat(),rand.nextFloat(),rand.nextFloat()));
+		instance.transform.rotate(new Vector3(2*rand.nextFloat()-1,2*rand.nextFloat()-1,2*rand.nextFloat()-1), new Vector3(0,1,0));
 		collisionObject.setWorldTransform(instance.transform);	
 	}
 }
