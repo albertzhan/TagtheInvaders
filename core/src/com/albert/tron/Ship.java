@@ -45,6 +45,8 @@ public class Ship {
 		return boxes.get(0);
 	}
 	public void resetOrientation(){
+		turning = 0;
+		turnangle = 5;
 		instance.transform.setToTranslation(position);
 		upDirection = new Vector3(0,1,0); //the ship's upside
 		rightDirection = new Vector3(-1,0,0);

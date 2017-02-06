@@ -6,6 +6,8 @@ package com.albert.tron;
  * There is a bug where sometimes the model and camera do not cooperate after finishing
  * I have tried orienting the model in every manner, then quitting, however can not accurately
  * replicate this bug. To fix, simply rotate the ship and then click q. This should resolve the issue
+ * I FOUND IT: IT OCCURS WHEN THE SHIP IS MID ROTATION. THE WAY TO FIX IT WILL THEREFORE
+ * BE TO FINISH THE ROTATION, USING THE turning boolean in each ship.
  */
 
 import com.badlogic.gdx.ApplicationAdapter;
