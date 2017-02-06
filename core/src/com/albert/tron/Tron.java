@@ -151,6 +151,7 @@ public class Tron extends ApplicationAdapter implements InputProcessor{
 		coolRect = new Texture(Gdx.files.internal("data/coolRect.png"));
 		telescope = new Texture(Gdx.files.internal("data/telescope.png"));
 		invadersTagged = new Texture(Gdx.files.internal("data/InvadersTagged.png"));
+		instructions = new Texture(Gdx.files.internal("data/Instructions2.png"));
 		spacePic = new Texture(Gdx.files.internal("space.jpg"));
 		batch = new SpriteBatch();
 		font = new BitmapFont();
@@ -287,6 +288,7 @@ public class Tron extends ApplicationAdapter implements InputProcessor{
 				mode = "Menu";
 			}
 		}if(mode.equals("Instructions")){
+			batch.draw(instructions, 18,0, Gdx.graphics.getWidth(),Gdx.graphics.getHeight());
 			if(Gdx.input.isKeyJustPressed(Keys.ESCAPE)){
 				mode = "Menu";
 			}
