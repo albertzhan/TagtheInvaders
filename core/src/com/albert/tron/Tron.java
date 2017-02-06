@@ -97,7 +97,7 @@ public class Tron extends ApplicationAdapter implements InputProcessor{
 	ModelInstance space;
     Array<ModelInstance> grids = new Array<ModelInstance>();
     Environment environment;
-    int x;
+    boolean moving;
     
     
     Invader tmpinvader;
@@ -124,6 +124,10 @@ public class Tron extends ApplicationAdapter implements InputProcessor{
 	Texture menuBGP;
 	Texture menuBGI;
 	Texture menuBGC;
+	Texture controls;
+	Texture instructions;
+	Texture bluewins;
+	Texture redwins;
 	
 	@Override
     public void create () {
@@ -135,7 +139,9 @@ public class Tron extends ApplicationAdapter implements InputProcessor{
 		menuBGP = new Texture(Gdx.files.internal("data/menuBGP.png"));
 		menuBGI = new Texture(Gdx.files.internal("data/menuBGI.png"));
 		menuBGC = new Texture(Gdx.files.internal("data/menuBGC.png"));
-		
+		controls = new Texture(Gdx.files.internal("data/Controls1.png"));
+		bluewins = new Texture(Gdx.files.internal("data/bluewins.png"));
+		redwins = new Texture(Gdx.files.internal("data/redwins.png"));
 		coolRect = new Texture(Gdx.files.internal("data/coolRect.png"));
 		telescope = new Texture(Gdx.files.internal("data/telescope.png"));
 		batch = new SpriteBatch();
@@ -200,18 +206,17 @@ public class Tron extends ApplicationAdapter implements InputProcessor{
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT | GL20.GL_DEPTH_BUFFER_BIT);//clearing the screen
         Gdx.gl.glEnable(GL20.GL_DEPTH_TEST);
 
-        checkKeyPressed();//checks rotations
-        handleCollisions();
+        checkKeyPressed();//checks keys
+        handleCollisions();//tagging the invaders
         handle3D();//everything with 3d in it (draws some 2d as well)
-        handle2D();//the 2d overlay
-		System.out.printf("%d %d\n", getMouse()[0],getMouse()[1]);
-		if (Gdx.input.isKeyJustPressed(Keys.R)){
-			modelSetup();
-		}
+        handle2D();//the 2d overlay (maybe also calls 3d stuffs)
+		//System.out.printf("%d %d\n", getMouse()[0],getMouse()[1]);
+        System.out.println(mode);
+		checkGameEnd();
     }
 	
 	@Override
-	public void dispose () {
+	public void dispose () {//Disposing stuff for memory control
         //cubeObject.dispose();
         //cubeShape.dispose();
 		//System.out.printf("Blue: %d    Red: %d", blue.kills, red.kills);
@@ -229,23 +234,22 @@ public class Tron extends ApplicationAdapter implements InputProcessor{
 		gameMenuGF.dispose();
 	}
 	public void handle3D(){
-		if (mode.equals("Menu")){
+		if (mode.equals("Menu") || mode.equals("Controls") || mode.equals("Instructions")){
 			renderSpaceCam();
 		}
-		if (!mode.equals("Play")){
-			return;
+		if(mode.equals("Play")){
+			cameraRender();
+			advance(0.1f);
 		}
-		cameraRender();
-		advance(0.1f);
+		if(mode.equals("Over")){
+			cameraRender();//they no longer advance
+		}
 	}
 	public void handle2D(){
 		Gdx.gl.glViewport(0, 0, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
 		batch.begin();
 		if(mode.equals("Menu")){
 			batch.draw(gameMenuGF, 0, 0,Gdx.graphics.getWidth(),Gdx.graphics.getHeight());
-			if(Gdx.input.isKeyJustPressed(Keys.ENTER)){
-				mode = "Play";
-			}
 			//play button
 			if(mouseInRectangle(888,600,1100,680)){
 				batch.draw(menuBGP, 0,0,Gdx.graphics.getWidth(),Gdx.graphics.getHeight());
@@ -268,12 +272,19 @@ public class Tron extends ApplicationAdapter implements InputProcessor{
 				}
 			}
 		}if(mode.equals("Controls")){
+			batch.draw(controls,0,0,Gdx.graphics.getWidth(),Gdx.graphics.getHeight());
 			if(Gdx.input.isKeyJustPressed(Keys.ESCAPE)){
 				mode = "Menu";
 			}
 		}if(mode.equals("Instructions")){
 			if(Gdx.input.isKeyJustPressed(Keys.ESCAPE)){
 				mode = "Menu";
+			}
+		}if(mode.equals("Over")){
+			if(blue.kills > 19){
+				batch.draw(bluewins,0,0,Gdx.graphics.getWidth(),Gdx.graphics.getHeight());
+			}if(red.kills > 19){
+				batch.draw(redwins,0,0,Gdx.graphics.getWidth(),Gdx.graphics.getHeight());
 			}
 		}
 		batch.end();
@@ -292,12 +303,26 @@ public class Tron extends ApplicationAdapter implements InputProcessor{
 		}
 	}
 	public void checkKeyPressed(){
+		if (Gdx.input.isKeyJustPressed(Keys.SPACE) && mode.equals("Play")){
+			moving = true;
+		}
+		if (Gdx.input.isKeyJustPressed(Keys.ENTER)){
+			if (mode.equals("Over")){
+				mode = "Menu";
+				modelSetup();
+			}
+		}
         checkBluePressed();
         checkRedPressed();
 	}
 	public void modelSetup(){
+		moving = false;
+		blue.kills = 0;
+		red.kills = 0;
 		blue.instance.transform.setToTranslation(new Vector3(9,0,9));
+		blue.instance.transform.setToRotation(new Vector3(0,1,0),0);
 		red.instance.transform.setToTranslation(new Vector3(-9,0,-9));
+		red.instance.transform.setToRotation(new Vector3(0,1,0),0);
 		blue.position = new Vector3(9,0,9);
 		red.position = new Vector3(-9,0,-9);
 		blue.resetOrientation();
@@ -383,6 +408,12 @@ public class Tron extends ApplicationAdapter implements InputProcessor{
         modelBatch.end();
         //blue top
         Gdx.gl.glViewport(0,3*Gdx.graphics.getHeight()/4,Gdx.graphics.getWidth()/2,Gdx.graphics.getHeight()/4);        
+        
+        batch.begin();
+        batch.draw(coolRect,0,0,2*Gdx.graphics.getWidth()/3,Gdx.graphics.getHeight());
+        //batch.draw(telescope,950,200,2*Gdx.graphics.getWidth()/3-1050,Gdx.graphics.getHeight()-40);
+        batch.end();
+        
         modelBatch.begin(blue.cam2);
         blue.cam2.update();
         modelBatch.render(blue.instance,environment);
@@ -431,7 +462,7 @@ public class Tron extends ApplicationAdapter implements InputProcessor{
 
 	}
 	public void advance(float speed){
-		if (Gdx.input.isKeyPressed(Keys.SPACE)){
+		if (moving){
 	        red.advance(speed);
 	        blue.advance(speed);
 		}
@@ -476,6 +507,12 @@ public class Tron extends ApplicationAdapter implements InputProcessor{
         	red.rotate(3);
         	//red.instance.transform.rotate(new Vector3(0,1,0), 90);
         }
+	}
+	public void checkGameEnd(){
+		if(blue.kills > 19 || red.kills > 19){
+			mode = "Over";
+			moving = false;
+		}
 	}
 	public void checkBluePressed(){
 		//System.out.println(blue.direction + " " + blue.upDirection + " " + blue.rightDirection);
