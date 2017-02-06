@@ -7,8 +7,8 @@ import com.albert.tron.Tron;
 public class DesktopLauncher {
 	public static void main (String[] arg) {
 		LwjglApplicationConfiguration config = new LwjglApplicationConfiguration();
-		config.height = 1000;
-		config.width = 2000;
+		config.height = 640;
+		config.width = 992;
 		config.title = "Tag the Invaders";
 		config.useHDPI = true;
 		new LwjglApplication(new Tron(), config);
