@@ -3,6 +3,9 @@ package com.albert.tron;
 /**Playing with 3d
  * Using the tutorial stuffs from Xoppa
  * models and everything are on his github
+ * There is a bug where sometimes the model and camera do not cooperate after finishing
+ * I have tried orienting the model in every manner, then quitting, however can not accurately
+ * replicate this bug. To fix, simply rotate the ship and then click q. This should resolve the issue
  */
 
 import com.badlogic.gdx.ApplicationAdapter;
@@ -70,6 +73,7 @@ public class Tron extends ApplicationAdapter implements InputProcessor{
 	PerspectiveCamera cam; 
 	PerspectiveCamera cam2;
 	PerspectiveCamera cam3;
+	PerspectiveCamera cam4;
 	PerspectiveCamera cam21;
 	PerspectiveCamera cam22;
 	Ship blue;
@@ -98,7 +102,7 @@ public class Tron extends ApplicationAdapter implements InputProcessor{
     Array<ModelInstance> grids = new Array<ModelInstance>();
     Environment environment;
     boolean moving;
-    
+    boolean toggleGrid = false;
     
     Invader tmpinvader;
     Array<Invader> invaders = new Array<Invader>();
@@ -128,6 +132,8 @@ public class Tron extends ApplicationAdapter implements InputProcessor{
 	Texture instructions;
 	Texture bluewins;
 	Texture redwins;
+	Texture invadersTagged;
+	Texture spacePic;
 	
 	@Override
     public void create () {
@@ -144,6 +150,8 @@ public class Tron extends ApplicationAdapter implements InputProcessor{
 		redwins = new Texture(Gdx.files.internal("data/redwins.png"));
 		coolRect = new Texture(Gdx.files.internal("data/coolRect.png"));
 		telescope = new Texture(Gdx.files.internal("data/telescope.png"));
+		invadersTagged = new Texture(Gdx.files.internal("data/InvadersTagged.png"));
+		spacePic = new Texture(Gdx.files.internal("space.jpg"));
 		batch = new SpriteBatch();
 		font = new BitmapFont();
 		shapeRenderer = new ShapeRenderer();
@@ -196,6 +204,8 @@ public class Tron extends ApplicationAdapter implements InputProcessor{
         
         packages = loader.loadModel(Gdx.files.internal("invader.obj"));
 
+        font.getData().setScale(20);
+
         //setting up the models
         modelSetup();
     }
@@ -211,7 +221,6 @@ public class Tron extends ApplicationAdapter implements InputProcessor{
         handle3D();//everything with 3d in it (draws some 2d as well)
         handle2D();//the 2d overlay (maybe also calls 3d stuffs)
 		//System.out.printf("%d %d\n", getMouse()[0],getMouse()[1]);
-        System.out.println(mode);
 		checkGameEnd();
     }
 	
@@ -255,6 +264,7 @@ public class Tron extends ApplicationAdapter implements InputProcessor{
 				batch.draw(menuBGP, 0,0,Gdx.graphics.getWidth(),Gdx.graphics.getHeight());
 				if(Gdx.input.isTouched()){
 					mode = "Play";
+					modelSetup();
 				}
 			}
 			//Controls
@@ -309,7 +319,18 @@ public class Tron extends ApplicationAdapter implements InputProcessor{
 		if (Gdx.input.isKeyJustPressed(Keys.ENTER)){
 			if (mode.equals("Over")){
 				mode = "Menu";
+				modelSetup();//resets things to escape over mode (or else kills > 19 and mode = over)
+			}
+		}
+		if(Gdx.input.isKeyJustPressed(Keys.Q)){
+			if(mode.equals("Play")){
+				mode = "Menu";
 				modelSetup();
+			}
+		}
+		if(Gdx.input.isKeyJustPressed(Keys.G)){
+			if(mode.equals("Play") || mode.equals("Over")){
+				toggleGrid = (toggleGrid == false);//if false, it becomes true, if true it becomes false
 			}
 		}
         checkBluePressed();
@@ -328,9 +349,10 @@ public class Tron extends ApplicationAdapter implements InputProcessor{
 		blue.resetOrientation();
 		red.resetOrientation();
 		cameraSetup();
+		blue.truerotate(2);//make the ship face the other way
 		blue.truerotate(2);
 		invaders = new Array<Invader>();
-        for (int i = 0; i < 200; ++i){
+        for (int i = 0; i < 100; ++i){
             packageInstance = new ModelInstance(packages);
             packageObject = new btCollisionObject();
             packageInstance.transform.translate(new Vector3 (0,4,2));
@@ -378,12 +400,19 @@ public class Tron extends ApplicationAdapter implements InputProcessor{
         cam3.update();
         red.advance(0.001f);
         blue.advance(0.001f);
+        
+        cam4 = new PerspectiveCamera(67,Gdx.graphics.getWidth(),Gdx.graphics.getHeight());
+        cam4.position.set(0,18,0);
+        cam4.lookAt(0,0,0);
+        cam4.near = 1f;
+        cam4.far = 300f;
+        cam4.update();
 	}
 	public void renderSpaceCam(){//space view that i'll use for the menu
 		Gdx.gl.glViewport(0, 0, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
 		modelBatch.begin(cam3);
 		modelBatch.render(space);
-		cam3.rotateAround(new Vector3(1,0,0), new Vector3(1,1,1),0.25f);
+		cam3.rotateAround(new Vector3(1,0,0), new Vector3(1,1,1),0.1f);
 		cam3.update();
 		modelBatch.end();
 	}
@@ -398,10 +427,11 @@ public class Tron extends ApplicationAdapter implements InputProcessor{
         blue.cam.update();
         modelBatch.render(red.instance,environment);
         modelBatch.render(blue.instance,environment);
-        modelBatch.render(grids,environment);
+        if(toggleGrid)modelBatch.render(grids,environment);
         //modelBatch.render(cubeInstance,environment);
         //modelBatch.render(cubesface.get(0),environment);
         modelBatch.render(packageInstance,environment);
+        modelBatch.render(space,environment);
         for (Invader i: invaders){
         	modelBatch.render(i.instance);
         }
@@ -411,6 +441,8 @@ public class Tron extends ApplicationAdapter implements InputProcessor{
         
         batch.begin();
         batch.draw(coolRect,0,0,2*Gdx.graphics.getWidth()/3,Gdx.graphics.getHeight());
+        batch.draw(invadersTagged, 80, -120,Gdx.graphics.getWidth()/2,Gdx.graphics.getHeight());
+        font.draw(batch, Integer.toString(blue.kills), 300f, 500f);
         //batch.draw(telescope,950,200,2*Gdx.graphics.getWidth()/3-1050,Gdx.graphics.getHeight()-40);
         batch.end();
         
@@ -428,18 +460,18 @@ public class Tron extends ApplicationAdapter implements InputProcessor{
         for (Invader i: invaders){
         	modelBatch.render(i.instance);
         }
-        //modelBatch.render(grids,environment);
-        //modelBatch.render(cubesface,environment);
-        if(space != null){
-            modelBatch.render(space);
-        }
+        if(toggleGrid)modelBatch.render(grids,environment);
+        modelBatch.render(space);
         modelBatch.end();
         
         //red top
         Gdx.gl.glViewport(2*Gdx.graphics.getWidth()/3, 3*Gdx.graphics.getHeight()/4, Gdx.graphics.getWidth()/2, Gdx.graphics.getHeight()/4);
-        
+        //this is the corner
         batch.begin();
+        //batch.draw(spacePic, 0, 0,Gdx.graphics.getWidth(),Gdx.graphics.getHeight());
         batch.draw(coolRect,0,0,2*Gdx.graphics.getWidth()/3,Gdx.graphics.getHeight());
+        batch.draw(invadersTagged, 80, -120,Gdx.graphics.getWidth()/2,Gdx.graphics.getHeight());
+        font.draw(batch, Integer.toString(red.kills), 300f, 500f);
         //batch.draw(telescope,950,200,2*Gdx.graphics.getWidth()/3-1050,Gdx.graphics.getHeight()-40);
         batch.end();
         
@@ -450,11 +482,14 @@ public class Tron extends ApplicationAdapter implements InputProcessor{
         //Middle
         
         Gdx.gl.glViewport(Gdx.graphics.getWidth()/3, 3*Gdx.graphics.getHeight()/4, Gdx.graphics.getWidth()/3, Gdx.graphics.getHeight()/4);
-        modelBatch.begin(cam3);
-        cam3.lookAt(0, 0, 0);
-        //modelBatch.render(red.instance,environment);
-        //modelBatch.render(blue.instance,environment);
-        modelBatch.render(gridlayerInstance,environment);
+        modelBatch.begin(cam4);
+        cam4.lookAt(0, 0, 0);
+        if(moving)cam4.rotateAround(new Vector3(0,0,0), new Vector3(1,0,0), 0.1f);
+        cam4.update();
+        modelBatch.render(red.instance,environment);
+        modelBatch.render(blue.instance,environment);
+        if(toggleGrid)modelBatch.render(grids,environment);
+        modelBatch.render(space,environment);
         for (Invader i: invaders){
         	modelBatch.render(i.instance);
         }

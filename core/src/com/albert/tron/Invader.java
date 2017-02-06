@@ -17,7 +17,7 @@ public class Invader {
 		this.collisionObject = collisionObject;
 		randomizeLocation();
 	}
-	private void randomizeLocation(){
+	private void randomizeLocation(){//randomizes the location and orientation
 		Random rand = new Random();
 		float x = (float) (14*rand.nextDouble() -8);//random float from -8 -> 8
 		float y = (float) (14*rand.nextDouble()-10);//makes sure it is within the region
