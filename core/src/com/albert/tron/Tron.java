@@ -201,11 +201,10 @@ public class Tron extends ApplicationAdapter implements InputProcessor{
         blue.collisionObject.setWorldTransform(blue.instance.transform);        
         red.collisionObject.setCollisionShape(shipShape);
         red.collisionObject.setWorldTransform(red.instance.transform);
-        cubeShape = new btBoxShape(new Vector3(10f,10f,10f));
         
-        packages = loader.loadModel(Gdx.files.internal("invader.obj"));
+        packages = loader.loadModel(Gdx.files.internal("invader.obj"));//these are the invaders
 
-        font.getData().setScale(20);
+        font.getData().setScale(20);//make it big
 
         //setting up the models
         modelSetup();
@@ -221,27 +220,34 @@ public class Tron extends ApplicationAdapter implements InputProcessor{
         handleCollisions();//tagging the invaders
         handle3D();//everything with 3d in it (draws some 2d as well)
         handle2D();//the 2d overlay (maybe also calls 3d stuffs)
-		//System.out.printf("%d %d\n", getMouse()[0],getMouse()[1]);
 		checkGameEnd();
     }
 	
 	@Override
 	public void dispose () {//Disposing stuff for memory control
-        //cubeObject.dispose();
-        //cubeShape.dispose();
-		//System.out.printf("Blue: %d    Red: %d", blue.kills, red.kills);
         shipObject.dispose();
         shipShape.dispose();
 
         dispatcher.dispose();
         collisionConfig.dispose();
-		//spaceCube.dispose();
 		modelBatch.dispose();
 		model.dispose();
 		model2.dispose();
 		batch.dispose();
 		img.dispose();
 		gameMenuGF.dispose();
+		instructions.dispose();
+		controls.dispose();
+		menuBGP.dispose();
+		menuBGI.dispose();
+		menuBGC.dispose();
+		controls.dispose();
+		bluewins.dispose();
+		redwins.dispose();
+		coolRect.dispose();
+		invadersTagged.dispose();
+		instructions.dispose();
+		spacePic.dispose();
 	}
 	public void handle3D(){
 		if (mode.equals("Menu") || mode.equals("Controls") || mode.equals("Instructions")){
@@ -358,7 +364,7 @@ public class Tron extends ApplicationAdapter implements InputProcessor{
             packageInstance = new ModelInstance(packages);
             packageObject = new btCollisionObject();
             packageInstance.transform.translate(new Vector3 (0,4,2));
-            packageObject.setCollisionShape(shipShape);//just the basic sphere
+            packageObject.setCollisionShape(shipShape);//having both the invaders and the ships spheres makes the collision less "wtf" with the camera angles
             packageObject.setWorldTransform(packageInstance.transform);
        
             tmpinvader = new Invader(packageInstance, packageObject);
@@ -432,7 +438,6 @@ public class Tron extends ApplicationAdapter implements InputProcessor{
         if(toggleGrid)modelBatch.render(grids,environment);
         //modelBatch.render(cubeInstance,environment);
         //modelBatch.render(cubesface.get(0),environment);
-        modelBatch.render(packageInstance,environment);
         modelBatch.render(space,environment);
         for (Invader i: invaders){
         	modelBatch.render(i.instance);
