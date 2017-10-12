@@ -362,7 +362,7 @@ public class Tron extends ApplicationAdapter implements InputProcessor{
 		blue.truerotate(2);//make the ship face the other way
 		blue.truerotate(2);
 		invaders = new Array<Invader>();
-        for (int i = 0; i < 100; ++i){
+        for (int i = 0; i < 20000; ++i){
             packageInstance = new ModelInstance(packages);
             packageObject = new btCollisionObject();
             packageInstance.transform.translate(new Vector3 (0,4,2));
